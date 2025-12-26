@@ -141,36 +141,25 @@ function App() {
           downloadFile(selectedFile, selectedFile.name);
         }
 
-        /* 🔥 PDF → DOCX VIA BACKEND */
+        /* ✅ PDF → DOCX (PRODUCTION SAFE) */
         if (selectedFormat === "docx") {
-          const formData = new FormData();
-          formData.append("file", selectedFile);
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = `${API_URL}/convert/pdf-to-docx`;
+          form.enctype = "multipart/form-data";
 
-          const response = await fetch(
-            `${API_URL}/convert/pdf-to-docx`,
-            {
-              method: "POST",
-              body: formData,
-            }
-          );
+          const input = document.createElement("input");
+          input.type = "file";
+          input.name = "file";
 
-          if (!response.ok) {
-            const err = await response.text();
-            console.error("Backend error:", err);
-            throw new Error("Erreur backend");
-          }
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(selectedFile);
+          input.files = dataTransfer.files;
 
-          const blob = await response.blob();
-
-          const fixedBlob = new Blob([blob], {
-            type:
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          });
-
-          downloadFile(
-            fixedBlob,
-            selectedFile.name.replace(/\.[^/.]+$/, ".docx")
-          );
+          form.appendChild(input);
+          document.body.appendChild(form);
+          form.submit();
+          document.body.removeChild(form);
         }
       }
 
