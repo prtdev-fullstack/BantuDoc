@@ -158,6 +158,7 @@ function App() {
 
           form.appendChild(input);
           document.body.appendChild(form);
+          form.target = "_blank";
           form.submit();
           document.body.removeChild(form);
         }
