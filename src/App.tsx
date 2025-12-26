@@ -14,7 +14,7 @@ import JSZip from "jszip";
 import logo from "./assets/logo.png";
 
 /* =========================
-   BACKEND URL (LOCAL / PROD)
+   BACKEND URL
 ========================== */
 const API_URL =
   import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
@@ -26,8 +26,14 @@ function App() {
   const [conversionOptions, setConversionOptions] =
     useState<ConversionOption[]>([]);
 
+  /* 🔥 STATE POUR FORMULAIRE NATIF (PDF → DOCX) */
+  const [downloadForm, setDownloadForm] = useState<{
+    action: string;
+    file: File;
+  } | null>(null);
+
   /* =========================
-     FILE TYPE & OPTIONS
+     FILE TYPE
   ========================== */
 
   const getFileType = (file: File): FileType => {
@@ -141,26 +147,13 @@ function App() {
           downloadFile(selectedFile, selectedFile.name);
         }
 
-        /* ✅ PDF → DOCX (PRODUCTION SAFE, NO REDIRECT) */
+        /* ✅ PDF → DOCX (PRODUCTION SAFE) */
         if (selectedFormat === "docx") {
-          const form = document.createElement("form");
-          form.method = "POST";
-          form.action = `${API_URL}/convert/pdf-to-docx`;
-          form.enctype = "multipart/form-data";
-          form.target = "_blank"; // 🔥 empêche la redirection
-
-          const input = document.createElement("input");
-          input.type = "file";
-          input.name = "file";
-
-          const dataTransfer = new DataTransfer();
-          dataTransfer.items.add(selectedFile);
-          input.files = dataTransfer.files;
-
-          form.appendChild(input);
-          document.body.appendChild(form);
-          form.submit();
-          document.body.removeChild(form);
+          setDownloadForm({
+            action: `${API_URL}/convert/pdf-to-docx`,
+            file: selectedFile,
+          });
+          return;
         }
       }
 
@@ -231,23 +224,37 @@ function App() {
             <button
               onClick={handleConvert}
               disabled={converting}
-              className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-xl font-semibold text-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
+              className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-xl font-semibold text-lg disabled:opacity-50"
             >
-              {converting ? (
-                <>
-                  <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Conversion en cours...</span>
-                </>
-              ) : (
-                <>
-                  <Download className="w-6 h-6" />
-                  <span>Convertir et télécharger</span>
-                </>
-              )}
+              {converting ? "Conversion en cours..." : "Convertir et télécharger"}
             </button>
           )}
         </div>
       </div>
+
+      {/* 🔥 FORMULAIRE NATIF INVISIBLE */}
+      {downloadForm && (
+        <form
+          action={downloadForm.action}
+          method="POST"
+          encType="multipart/form-data"
+          target="_blank"
+          style={{ display: "none" }}
+        >
+          <input
+            type="file"
+            name="file"
+            ref={(input) => {
+              if (input && downloadForm.file) {
+                const dt = new DataTransfer();
+                dt.items.add(downloadForm.file);
+                input.files = dt.files;
+                setTimeout(() => input.form?.submit(), 0);
+              }
+            }}
+          />
+        </form>
+      )}
     </div>
   );
 }
