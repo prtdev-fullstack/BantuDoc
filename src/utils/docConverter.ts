@@ -74,18 +74,23 @@ export const convertImageToDocx = async (
 export const convertPdfToDocx = async (
   file: File
 ): Promise<ConversionResult> => {
+  const API_URL = import.meta.env.VITE_API_URL;
+
+  if (!API_URL) {
+    throw new Error("VITE_API_URL non définie");
+  }
+
   const formData = new FormData();
   formData.append("file", file);
 
   const response = await fetch(
-    "https://bantudoc-backend.onrender.com/convert/pdf-to-docx",
+    `${API_URL}/convert/pdf-to-docx`,
     {
       method: "POST",
       body: formData,
     }
   );
 
-  // 🔥 DEBUG CLAIR
   if (!response.ok) {
     const errorText = await response.text();
     console.error("❌ Backend error:", errorText);
