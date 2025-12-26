@@ -145,7 +145,7 @@ function App() {
         if (selectedFormat === "docx") {
           const form = document.createElement("form");
           form.method = "POST";
-          form.action = `${API_URL}/convert/pdf-to-docx`;
+          form.action = `${API_URL}/convert/pdf-to-docx/`;
           form.enctype = "multipart/form-data";
 
           const input = document.createElement("input");
