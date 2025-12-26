@@ -8,12 +8,11 @@ import { convertTextToPdf } from './utils/textConverter';
 import {
   convertTextToDocx,
   convertImageToDocx,
+  convertPdfToDocx, // ✅ UTILISATION BACKEND
 } from './utils/docConverter';
-import { Download, FileText } from 'lucide-react';
+import { Download } from 'lucide-react';
 import JSZip from 'jszip';
 import logo from './assets/logo.png';
-
-
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -148,10 +147,8 @@ function App() {
       else if (fileType === 'application/pdf') {
         if (selectedFormat === 'image') {
           const results = await convertPdfToImages(selectedFile);
-
           const zip = new JSZip();
           results.forEach((r) => zip.file(r.filename, r.blob));
-
           const zipBlob = await zip.generateAsync({ type: 'blob' });
           downloadFile(
             zipBlob,
@@ -163,26 +160,10 @@ function App() {
           downloadFile(selectedFile, selectedFile.name);
         }
 
-        // 🔥 PDF → DOCX VIA BACKEND
+        // ✅ PDF → DOCX VIA BACKEND (CLEAN)
         if (selectedFormat === 'docx') {
-          const formData = new FormData();
-          formData.append('file', selectedFile);
-
-          const response = await fetch(
-            'http://localhost:8000/convert/pdf-to-docx',
-            {
-              method: 'POST',
-              body: formData,
-            }
-          );
-
-          if (!response.ok) {
-            throw new Error('Erreur lors de la conversion PDF → DOCX');
-          }
-
-          const blob = await response.blob();
-          const filename = selectedFile.name.replace(/\.[^/.]+$/, '.docx');
-          downloadFile(blob, filename);
+          const result = await convertPdfToDocx(selectedFile);
+          downloadFile(result.blob, result.filename);
         }
       }
 
@@ -219,11 +200,11 @@ function App() {
       <div className="max-w-3xl mx-auto px-6 py-16">
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-              <img
+            <img
               src={logo}
               alt="BantuDoc Logo"
-               className="h-40 w-auto object-contain"
-                />
+              className="h-40 w-auto object-contain"
+            />
           </div>
 
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
