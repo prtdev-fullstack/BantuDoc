@@ -141,12 +141,13 @@ function App() {
           downloadFile(selectedFile, selectedFile.name);
         }
 
-        /* ✅ PDF → DOCX (PRODUCTION SAFE) */
+        /* ✅ PDF → DOCX (PRODUCTION SAFE, NO REDIRECT) */
         if (selectedFormat === "docx") {
           const form = document.createElement("form");
           form.method = "POST";
-          form.action = `${API_URL}/convert/pdf-to-docx/`;
+          form.action = `${API_URL}/convert/pdf-to-docx`;
           form.enctype = "multipart/form-data";
+          form.target = "_blank"; // 🔥 empêche la redirection
 
           const input = document.createElement("input");
           input.type = "file";
@@ -158,7 +159,6 @@ function App() {
 
           form.appendChild(input);
           document.body.appendChild(form);
-          form.target = "_blank";
           form.submit();
           document.body.removeChild(form);
         }
