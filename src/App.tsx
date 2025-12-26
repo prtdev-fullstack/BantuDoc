@@ -1,22 +1,29 @@
-import { useState } from 'react';
-import { FileType, ConversionOption } from './types';
-import { FileUploader } from './components/FileUploader';
-import { ConversionOptions } from './components/ConversionOptions';
-import { convertImage } from './utils/imageConverter';
-import { convertPdfToImages } from './utils/pdfConverter';
-import { convertTextToPdf } from './utils/textConverter';
+import { useState } from "react";
+import { FileType, ConversionOption } from "./types";
+import { FileUploader } from "./components/FileUploader";
+import { ConversionOptions } from "./components/ConversionOptions";
+import { convertImage } from "./utils/imageConverter";
+import { convertPdfToImages } from "./utils/pdfConverter";
+import { convertTextToPdf } from "./utils/textConverter";
 import {
   convertTextToDocx,
   convertImageToDocx,
-  convertPdfToDocx, // ✅ UTILISATION BACKEND
-} from './utils/docConverter';
-import { Download } from 'lucide-react';
-import JSZip from 'jszip';
-import logo from './assets/logo.png';
+} from "./utils/docConverter";
+import { Download } from "lucide-react";
+import JSZip from "jszip";
+import logo from "./assets/logo.png";
+
+/* =========================
+   BACKEND URL (LOCAL / PROD)
+========================== */
+const API_URL =
+  import.meta.env.DEV
+    ? "http://127.0.0.1:8000"
+    : "https://bantudoc-backend.onrender.com";
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedFormat, setSelectedFormat] = useState<string>('');
+  const [selectedFormat, setSelectedFormat] = useState<string>("");
   const [converting, setConverting] = useState(false);
   const [conversionOptions, setConversionOptions] = useState<ConversionOption[]>([]);
 
@@ -25,37 +32,37 @@ function App() {
   ========================== */
 
   const getFileType = (file: File): FileType => {
-    if (file.type === 'image/png') return 'image/png';
-    if (file.type === 'image/jpeg') return 'image/jpeg';
-    if (file.type === 'image/webp') return 'image/webp';
-    if (file.type === 'application/pdf') return 'application/pdf';
-    if (file.type === 'text/plain') return 'text/plain';
-    return 'unknown';
+    if (file.type === "image/png") return "image/png";
+    if (file.type === "image/jpeg") return "image/jpeg";
+    if (file.type === "image/webp") return "image/webp";
+    if (file.type === "application/pdf") return "application/pdf";
+    if (file.type === "text/plain") return "text/plain";
+    return "unknown";
   };
 
   const getConversionOptions = (fileType: FileType): ConversionOption[] => {
     switch (fileType) {
-      case 'image/png':
-      case 'image/jpeg':
-      case 'image/webp':
+      case "image/png":
+      case "image/jpeg":
+      case "image/webp":
         return [
-          { value: 'png', label: 'PNG', icon: '🖼️' },
-          { value: 'jpg', label: 'JPG', icon: '📷' },
-          { value: 'webp', label: 'WebP', icon: '🌐' },
-          { value: 'pdf', label: 'PDF', icon: '📄' },
-          { value: 'docx', label: 'Word (DOCX)', icon: '📘' },
+          { value: "png", label: "PNG", icon: "🖼️" },
+          { value: "jpg", label: "JPG", icon: "📷" },
+          { value: "webp", label: "WebP", icon: "🌐" },
+          { value: "pdf", label: "PDF", icon: "📄" },
+          { value: "docx", label: "Word (DOCX)", icon: "📘" },
         ];
-      case 'application/pdf':
+      case "application/pdf":
         return [
-          { value: 'image', label: 'Images (ZIP)', icon: '🗜️' },
-          { value: 'pdf', label: 'PDF', icon: '📄' },
-          { value: 'docx', label: 'Word (DOCX)', icon: '📘' },
+          { value: "image", label: "Images (ZIP)", icon: "🗜️" },
+          { value: "pdf", label: "PDF", icon: "📄" },
+          { value: "docx", label: "Word (DOCX)", icon: "📘" },
         ];
-      case 'text/plain':
+      case "text/plain":
         return [
-          { value: 'pdf', label: 'PDF', icon: '📄' },
-          { value: 'docx', label: 'Word (DOCX)', icon: '📘' },
-          { value: 'txt', label: 'Texte (TXT)', icon: '📝' },
+          { value: "pdf", label: "PDF", icon: "📄" },
+          { value: "docx", label: "Word (DOCX)", icon: "📘" },
+          { value: "txt", label: "Texte (TXT)", icon: "📝" },
         ];
       default:
         return [];
@@ -70,24 +77,24 @@ function App() {
     setSelectedFile(file);
     const options = getConversionOptions(getFileType(file));
     setConversionOptions(options);
-    setSelectedFormat(options[0]?.value || '');
+    setSelectedFormat(options[0]?.value || "");
   };
 
   const handleClear = () => {
     setSelectedFile(null);
-    setSelectedFormat('');
+    setSelectedFormat("");
     setConversionOptions([]);
   };
 
   const downloadFile = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
+    window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   /* =========================
@@ -103,89 +110,90 @@ function App() {
       const fileType = getFileType(selectedFile);
 
       /* IMAGE */
-      if (['image/png', 'image/jpeg', 'image/webp'].includes(fileType)) {
-        if (['png', 'jpg', 'webp'].includes(selectedFormat)) {
+      if (["image/png", "image/jpeg", "image/webp"].includes(fileType)) {
+        if (["png", "jpg", "webp"].includes(selectedFormat)) {
           const result = await convertImage(
             selectedFile,
-            selectedFormat as 'png' | 'jpg' | 'webp'
+            selectedFormat as "png" | "jpg" | "webp"
           );
           downloadFile(result.blob, result.filename);
         }
 
-        if (selectedFormat === 'pdf') {
-          const imgResult = await convertImage(selectedFile, 'png');
-          const { jsPDF } = await import('jspdf');
-          const pdf = new jsPDF();
-
-          const imgURL = URL.createObjectURL(imgResult.blob);
-          const img = new Image();
-
-          img.onload = () => {
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const width = Math.min(pageWidth - 20, img.width);
-            const height = (img.height * width) / img.width;
-
-            pdf.addImage(img, 'PNG', 10, 10, width, height);
-            downloadFile(
-              pdf.output('blob'),
-              selectedFile.name.replace(/\.[^/.]+$/, '.pdf')
-            );
-
-            URL.revokeObjectURL(imgURL);
-          };
-
-          img.src = imgURL;
-        }
-
-        if (selectedFormat === 'docx') {
+        if (selectedFormat === "docx") {
           const result = await convertImageToDocx(selectedFile);
           downloadFile(result.blob, result.filename);
         }
       }
 
       /* PDF */
-      else if (fileType === 'application/pdf') {
-        if (selectedFormat === 'image') {
+      else if (fileType === "application/pdf") {
+        if (selectedFormat === "image") {
           const results = await convertPdfToImages(selectedFile);
           const zip = new JSZip();
           results.forEach((r) => zip.file(r.filename, r.blob));
-          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          const zipBlob = await zip.generateAsync({ type: "blob" });
           downloadFile(
             zipBlob,
-            selectedFile.name.replace('.pdf', '_images.zip')
+            selectedFile.name.replace(".pdf", "_images.zip")
           );
         }
 
-        if (selectedFormat === 'pdf') {
+        if (selectedFormat === "pdf") {
           downloadFile(selectedFile, selectedFile.name);
         }
 
-        // ✅ PDF → DOCX VIA BACKEND (CLEAN)
-        if (selectedFormat === 'docx') {
-          const result = await convertPdfToDocx(selectedFile);
-          downloadFile(result.blob, result.filename);
+        /* 🔥 PDF → DOCX VIA BACKEND */
+        if (selectedFormat === "docx") {
+          const formData = new FormData();
+          formData.append("file", selectedFile);
+
+          const response = await fetch(
+            `${API_URL}/convert/pdf-to-docx`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+
+          if (!response.ok) {
+            const err = await response.text();
+            console.error("Backend error:", err);
+            throw new Error("Erreur backend");
+          }
+
+          const blob = await response.blob();
+
+          const fixedBlob = new Blob([blob], {
+            type:
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          });
+
+          downloadFile(
+            fixedBlob,
+            selectedFile.name.replace(/\.[^/.]+$/, ".docx")
+          );
         }
       }
 
       /* TEXT */
-      else if (fileType === 'text/plain') {
-        if (selectedFormat === 'pdf') {
+      else if (fileType === "text/plain") {
+        if (selectedFormat === "pdf") {
           const result = await convertTextToPdf(selectedFile);
           downloadFile(result.blob, result.filename);
         }
 
-        if (selectedFormat === 'docx') {
+        if (selectedFormat === "docx") {
           const result = await convertTextToDocx(selectedFile);
           downloadFile(result.blob, result.filename);
         }
 
-        if (selectedFormat === 'txt') {
+        if (selectedFormat === "txt") {
           downloadFile(selectedFile, selectedFile.name);
         }
       }
     } catch (error) {
-      console.error('Conversion error:', error);
-      alert('Erreur lors de la conversion. Veuillez réessayer.');
+      console.error("❌ Conversion error:", error);
+      alert("Erreur lors de la conversion. Veuillez réessayer.");
     } finally {
       setConverting(false);
     }

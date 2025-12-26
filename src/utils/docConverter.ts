@@ -1,17 +1,12 @@
-import { Document, Packer, Paragraph, TextRun } from 'docx';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min?url';
-import { ConversionResult } from '../types';
+import { Document, Packer, Paragraph, TextRun } from "docx";
+import { ConversionResult } from "../types";
 
 /* =========================
-   CONFIG PDF.JS (VITE SAFE)
+   TEXTE → DOCX (FRONTEND)
 ========================== */
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
-
-/* =========================
-   TEXT → DOCX
-========================== */
-export const convertTextToDocx = async (file: File): Promise<ConversionResult> => {
+export const convertTextToDocx = async (
+  file: File
+): Promise<ConversionResult> => {
   const text = await file.text();
   const lines = text.split(/\r?\n/);
 
@@ -21,7 +16,7 @@ export const convertTextToDocx = async (file: File): Promise<ConversionResult> =
         children: lines.map(
           (line) =>
             new Paragraph({
-              text: line.trim() || ' ',
+              text: line.trim() || " ",
               spacing: { line: 360 },
             })
         ),
@@ -30,80 +25,77 @@ export const convertTextToDocx = async (file: File): Promise<ConversionResult> =
   });
 
   const blob = await Packer.toBlob(doc);
+
   return {
     blob,
-    filename: file.name.replace(/\.[^/.]+$/, '.docx'),
+    filename: file.name.replace(/\.[^/.]+$/, ".docx"),
   };
 };
 
 /* =========================
-   IMAGE → DOCX (TEXTE)
+   IMAGE → DOCX (INFO ONLY)
 ========================== */
-export const convertImageToDocx = async (file: File): Promise<ConversionResult> => {
+export const convertImageToDocx = async (
+  file: File
+): Promise<ConversionResult> => {
   const doc = new Document({
     sections: [
       {
         children: [
           new Paragraph({
-            children: [new TextRun({ text: 'Image convertie en document Word', bold: true })],
+            children: [
+              new TextRun({
+                text: "Image convertie en document Word",
+                bold: true,
+              }),
+            ],
           }),
-          new Paragraph({ text: `Fichier : ${file.name}` }),
-          new Paragraph({ text: '⚠️ L’image n’est pas intégrée visuellement.' }),
+          new Paragraph({ text: `Fichier source : ${file.name}` }),
+          new Paragraph({
+            text:
+              "⚠️ L’image n’est pas intégrée visuellement. Conversion textuelle uniquement.",
+          }),
         ],
       },
     ],
   });
 
   const blob = await Packer.toBlob(doc);
+
   return {
     blob,
-    filename: file.name.replace(/\.[^/.]+$/, '.docx'),
+    filename: file.name.replace(/\.[^/.]+$/, ".docx"),
   };
 };
 
 /* =========================
-   PDF → DOCX (TEXTE ONLY)
+   PDF → DOCX (BACKEND API)
 ========================== */
-export const convertPdfToDocx = async (file: File): Promise<ConversionResult> => {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+export const convertPdfToDocx = async (
+  file: File
+): Promise<ConversionResult> => {
+  const formData = new FormData();
+  formData.append("file", file);
 
-  const paragraphs: Paragraph[] = [];
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-
-    const pageText = textContent.items
-      .map((item: any) => item.str)
-      .join('')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    paragraphs.push(
-      new Paragraph({
-        text: pageText || `[Page ${i} : aucun texte détecté]`,
-        spacing: { line: 360 },
-      })
-    );
-
-    if (i < pdf.numPages) {
-      paragraphs.push(
-        new Paragraph({
-          text: `--- Page ${i} ---`,
-          spacing: { before: 400, after: 400 },
-        })
-      );
+  const response = await fetch(
+    "https://bantudoc-backend.onrender.com/convert/pdf-to-docx",
+    {
+      method: "POST",
+      body: formData,
     }
+  );
+
+  // 🔥 DEBUG CLAIR
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("❌ Backend error:", errorText);
+    throw new Error(errorText || "Erreur serveur lors de la conversion");
   }
 
-  const doc = new Document({
-    sections: [{ children: paragraphs }],
-  });
+  const blob = await response.blob();
 
-  const blob = await Packer.toBlob(doc);
   return {
     blob,
-    filename: file.name.replace(/\.[^/.]+$/, '.docx'),
+    filename: file.name.replace(/\.[^/.]+$/, ".docx"),
   };
 };
