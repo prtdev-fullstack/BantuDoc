@@ -14,10 +14,11 @@ import JSZip from "jszip";
 import logo from "./assets/logo.png";
 
 /* =========================
-   BACKEND URL
+   ✅ BACKEND URL (FIX FINAL)
 ========================== */
 const API_URL =
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+  import.meta.env.VITE_API_URL ||
+  "https://backend-2fnt.onrender.com";
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -26,16 +27,9 @@ function App() {
   const [conversionOptions, setConversionOptions] =
     useState<ConversionOption[]>([]);
 
-  /* 🔥 STATE POUR FORMULAIRE NATIF (PDF → DOCX) */
-  const [downloadForm, setDownloadForm] = useState<{
-    action: string;
-    file: File;
-  } | null>(null);
-
   /* =========================
      FILE TYPE
   ========================== */
-
   const getFileType = (file: File): FileType => {
     if (file.type === "image/png") return "image/png";
     if (file.type === "image/jpeg") return "image/jpeg";
@@ -77,7 +71,6 @@ function App() {
   /* =========================
      HANDLERS
   ========================== */
-
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
     const options = getConversionOptions(getFileType(file));
@@ -105,10 +98,8 @@ function App() {
   /* =========================
      CONVERSION LOGIC
   ========================== */
-
   const handleConvert = async () => {
     if (!selectedFile || !selectedFormat) return;
-
     setConverting(true);
 
     try {
@@ -147,13 +138,30 @@ function App() {
           downloadFile(selectedFile, selectedFile.name);
         }
 
-        /* ✅ PDF → DOCX (PRODUCTION SAFE) */
+        /* ✅ PDF → DOCX (BACKEND FETCH SAFE) */
         if (selectedFormat === "docx") {
-          setDownloadForm({
-            action: `${API_URL}/convert/pdf-to-docx`,
-            file: selectedFile,
-          });
-          return;
+          const formData = new FormData();
+          formData.append("file", selectedFile);
+
+          const response = await fetch(
+            `${API_URL}/convert/pdf-to-docx`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+
+          if (!response.ok) {
+            const err = await response.text();
+            console.error("Backend error:", err);
+            throw new Error("Erreur backend");
+          }
+
+          const blob = await response.blob();
+          downloadFile(
+            blob,
+            selectedFile.name.replace(/\.[^/.]+$/, ".docx")
+          );
         }
       }
 
@@ -184,7 +192,6 @@ function App() {
   /* =========================
      UI
   ========================== */
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
       <div className="max-w-3xl mx-auto px-6 py-16">
@@ -226,35 +233,13 @@ function App() {
               disabled={converting}
               className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-xl font-semibold text-lg disabled:opacity-50"
             >
-              {converting ? "Conversion en cours..." : "Convertir et télécharger"}
+              {converting
+                ? "Conversion en cours..."
+                : "Convertir et télécharger"}
             </button>
           )}
         </div>
       </div>
-
-      {/* 🔥 FORMULAIRE NATIF INVISIBLE */}
-      {downloadForm && (
-        <form
-          action={downloadForm.action}
-          method="POST"
-          encType="multipart/form-data"
-          target="_blank"
-          style={{ display: "none" }}
-        >
-          <input
-            type="file"
-            name="file"
-            ref={(input) => {
-              if (input && downloadForm.file) {
-                const dt = new DataTransfer();
-                dt.items.add(downloadForm.file);
-                input.files = dt.files;
-                setTimeout(() => input.form?.submit(), 0);
-              }
-            }}
-          />
-        </form>
-      )}
     </div>
   );
 }
