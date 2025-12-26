@@ -17,15 +17,14 @@ import logo from "./assets/logo.png";
    BACKEND URL (LOCAL / PROD)
 ========================== */
 const API_URL =
-  import.meta.env.DEV
-    ? "http://127.0.0.1:8000"
-    : "https://bantudoc-backend.onrender.com";
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<string>("");
   const [converting, setConverting] = useState(false);
-  const [conversionOptions, setConversionOptions] = useState<ConversionOption[]>([]);
+  const [conversionOptions, setConversionOptions] =
+    useState<ConversionOption[]>([]);
 
   /* =========================
      FILE TYPE & OPTIONS
