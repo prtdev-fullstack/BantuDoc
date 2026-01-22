@@ -83,13 +83,10 @@ export const convertPdfToDocx = async (
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(
-    `${API_URL}/convert/pdf-to-docx`,
-    {
-      method: "POST",
-      body: formData,
-    }
-  );
+  const response = await fetch(`${API_URL}/convert/pdf-to-docx`, {
+    method: "POST",
+    body: formData,
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -102,5 +99,39 @@ export const convertPdfToDocx = async (
   return {
     blob,
     filename: file.name.replace(/\.[^/.]+$/, ".docx"),
+  };
+};
+
+/* =========================
+   DOCX → PDF (BACKEND API) ✅ NEW
+========================== */
+export const convertDocxToPdf = async (
+  file: File
+): Promise<ConversionResult> => {
+  const API_URL = import.meta.env.VITE_API_URL;
+
+  if (!API_URL) {
+    throw new Error("VITE_API_URL non définie");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_URL}/convert/docx-to-pdf`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("❌ Backend error:", errorText);
+    throw new Error(errorText || "Erreur serveur lors de la conversion");
+  }
+
+  const blob = await response.blob();
+
+  return {
+    blob,
+    filename: file.name.replace(/\.[^/.]+$/, ".pdf"),
   };
 };
