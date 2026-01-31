@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FileType, ConversionOption } from "./types";
 import { FileUploader } from "./components/FileUploader";
 import { ConversionOptions } from "./components/ConversionOptions";
-import { convertImage } from "./utils/imageConverter";
+import { convertImage, convertImageToPdf } from "./utils/imageConverter";
 import { convertPdfToImages } from "./utils/pdfConverter";
 import { convertTextToPdf } from "./utils/textConverter";
 import { convertTextToDocx, convertImageToDocx } from "./utils/docConverter";
@@ -18,32 +18,25 @@ function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<string>("");
   const [converting, setConverting] = useState(false);
-  const [conversionOptions, setConversionOptions] = useState<ConversionOption[]>(
-    []
-  );
+  const [conversionOptions, setConversionOptions] = useState<ConversionOption[]>([]);
 
   /* =========================
      FILE TYPE
   ========================== */
 
   const getFileType = (file: File): FileType => {
-    // Images
     if (file.type === "image/png") return "image/png";
     if (file.type === "image/jpeg") return "image/jpeg";
     if (file.type === "image/webp") return "image/webp";
-
-    // PDF
     if (file.type === "application/pdf") return "application/pdf";
-
-    // TXT
     if (file.type === "text/plain") return "text/plain";
 
-    // Word (DOCX / DOC)
     if (
       file.type ===
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
       return "application/docx";
+
     if (file.type === "application/msword") return "application/doc";
 
     return "unknown";
@@ -51,7 +44,6 @@ function App() {
 
   const getConversionOptions = (fileType: FileType): ConversionOption[] => {
     switch (fileType) {
-      /* IMAGE */
       case "image/png":
       case "image/jpeg":
       case "image/webp":
@@ -63,22 +55,16 @@ function App() {
           { value: "docx", label: "Word (DOCX)", icon: "📘" },
         ];
 
-      /* PDF */
       case "application/pdf":
         return [
           { value: "image", label: "Images (ZIP)", icon: "🗜️" },
           { value: "docx", label: "Word (DOCX)", icon: "📘" },
         ];
 
-      /* WORD ✅ NEW */
       case "application/docx":
       case "application/doc":
-        return [
-          { value: "pdf", label: "PDF", icon: "📄" },
-          
-        ];
+        return [{ value: "pdf", label: "PDF", icon: "📄" }];
 
-      /* TEXT */
       case "text/plain":
         return [
           { value: "pdf", label: "PDF", icon: "📄" },
@@ -97,7 +83,6 @@ function App() {
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
-
     const options = getConversionOptions(getFileType(file));
     setConversionOptions(options);
     setSelectedFormat(options[0]?.value || "");
@@ -119,10 +104,6 @@ function App() {
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
   };
-
-  /* =========================
-     HELPER : download via form (safe for backend file response)
-  ========================== */
 
   const downloadFromBackend = (endpoint: string, file: File) => {
     const form = document.createElement("form");
@@ -166,14 +147,14 @@ function App() {
           downloadFile(result.blob, result.filename);
         }
 
-        if (selectedFormat === "docx") {
-          const result = await convertImageToDocx(selectedFile);
+        if (selectedFormat === "pdf") {
+          const result = await convertImageToPdf(selectedFile);
           downloadFile(result.blob, result.filename);
         }
 
-        if (selectedFormat === "pdf") {
-          // (Tu n'avais pas encore la conversion image -> pdf ici)
-          alert("Conversion Image → PDF pas encore implémentée.");
+        if (selectedFormat === "docx") {
+          const result = await convertImageToDocx(selectedFile);
+          downloadFile(result.blob, result.filename);
         }
       }
 
@@ -187,30 +168,20 @@ function App() {
           downloadFile(zipBlob, selectedFile.name.replace(".pdf", "_images.zip"));
         }
 
-        if (selectedFormat === "pdf") {
-          downloadFile(selectedFile, selectedFile.name);
-        }
-
-        // ✅ PDF -> DOCX (backend)
         if (selectedFormat === "docx") {
           downloadFromBackend("/convert/pdf-to-docx", selectedFile);
-          setConverting(false);
           return;
         }
       }
 
-      /* WORD ✅ NEW */
-      else if (fileType === "application/docx" || fileType === "application/doc") {
+      /* WORD */
+      else if (
+        fileType === "application/docx" ||
+        fileType === "application/doc"
+      ) {
         if (selectedFormat === "pdf") {
-          // ✅ DOCX -> PDF (backend)
           downloadFromBackend("/convert/docx-to-pdf", selectedFile);
-          setConverting(false);
           return;
-        }
-
-        if (selectedFormat === "docx") {
-          // rien à convertir, on redownload juste
-          downloadFile(selectedFile, selectedFile.name);
         }
       }
 
@@ -230,11 +201,6 @@ function App() {
           downloadFile(selectedFile, selectedFile.name);
         }
       }
-
-      /* UNKNOWN */
-      else {
-        alert("Format de fichier non supporté.");
-      }
     } catch (error) {
       console.error("❌ Conversion error:", error);
       alert("Erreur lors de la conversion. Veuillez réessayer.");
@@ -252,11 +218,7 @@ function App() {
       <div className="max-w-3xl mx-auto px-6 py-16">
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-            <img
-              src={logo}
-              alt="BantuDoc Logo"
-              className="h-40 w-auto object-contain"
-            />
+            <img src={logo} alt="BantuDoc Logo" className="h-40 w-auto object-contain" />
           </div>
 
           <h1 className="text-5xl font-bold text-gray-900 mb-4">

@@ -60,3 +60,35 @@ export const convertImage = async (
     img.src = URL.createObjectURL(file);
   });
 };
+
+/* =========================
+   IMAGE → PDF (BACKEND SAFE)
+========================== */
+
+export const convertImageToPdf = async (
+  file: File
+): Promise<ConversionResult> => {
+  // ✅ fallback local si variable absente
+  const API_URL =
+    import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_URL}/convert/image-to-pdf`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Erreur conversion Image → PDF");
+  }
+
+  const blob = await response.blob();
+
+  return {
+    blob,
+    filename: file.name.replace(/\.[^/.]+$/, ".pdf"),
+  };
+};
